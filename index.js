@@ -26,17 +26,23 @@ function createVersion(contents, opts, done) {
     path += '?' + secretParamName + '=' + opts.secret;
   }
 
+  var postBody = JSON.stringify({
+    contents: contents
+  });
+
+  var headers = {
+    'Content-Type': 'application/json',
+    'Content-Length': postBody.length
+  };
+
   var httpOptions = {
     host: opts.address,
     // /apps/:appId/versions/:versionId
     path: path,
     method: 'POST',
-    port: opts.port || 80
+    port: opts.port || 80,
+    headers: headers
   };
-
-  var jsonPostBody = JSON.stringify({
-    contents: contents
-  });
 
   var req = http.request(httpOptions, function(res) {
     res.setEncoding('utf-8');
@@ -48,14 +54,12 @@ function createVersion(contents, opts, done) {
     });
 
     res.on('end', function() {
-      console.log("response:");
-      console.log(resultObject);
       var resultObject = JSON.parse(responseString);
       done();
     });
   });
 
-  req.write(jsonPostBody);
+  req.write(postBody);
   req.end();
 }
 
@@ -70,6 +74,8 @@ module.exports = function(opts) {
   // https://github.com/gulpjs/gulp/blob/master/docs/writing-a-plugin/README.md
   function depot(file, enc, callback) {
     /*jshint validthis:true*/
+
+    var _this = this;
 
     // Do nothing if no contents
     if (file.isNull()) {
@@ -94,7 +100,10 @@ module.exports = function(opts) {
 
     if (file.isBuffer()) {
       // http://nodejs.org/api/buffer.html
-      createVersion(file.contents.toString(), opts, callback);
+      createVersion(file.contents.toString(), opts, function(err, data) {
+        _this.emit('data', data);
+        callback();
+      });
       this.push(file);
     }
   }
