@@ -38,6 +38,11 @@ gulp.src('index.html')
 
 The contents passed to the plugin must be the contents of your `index.html` file.
 
+#### options.address
+Type: `String`
+
+The address of the depot server.
+
 #### options.applicationName
 Type: `String`
 
@@ -50,8 +55,27 @@ Type: `Boolean`
 
 #### options.secret
 Type: `String`
+Default: `null`
 
 *(optional)* Authentication shared secret, if present.
+
+#### opts.secretParamName
+Type: `String`
+Default: `"secret"`
+
+*(optional)* URL parameter name for the shared secret.
+
+#### options.version
+Type: `String`
+Default: (auto-generated)
+
+*(optional)* Specify a version name manually.
+
+#### options.port
+Type: `Number`
+Default: 80
+
+*(optional)* Specify the server port.
 
 ## License
 
