@@ -15,6 +15,7 @@ function createVersionNumber() {
   return new Date().toJSON().slice(0, 10) + '--' + uniqueId();
 }
 
+// Gets necessary URL request options
 function getHTTPOptions(body, opts) {
   return {
     host: opts.address,
@@ -27,16 +28,21 @@ function getHTTPOptions(body, opts) {
   }
 }
 
+// Adds the shared secret parameter to the request URL if necessary
+function appendSecret(opts, path) {
+  if (opts.secret) {
+    var secretParamName = opts.secretParamName || 'secret';
+    path += '?' + secretParamName + '=' + opts.secret;
+  }
+}
+
 // Creates an application version in depot with the file contents
 function createVersion(contents, opts, done) {
   "use strict";
 
   var version = opts.version || createVersionNumber();
   var path = '/apps/' + opts.applicationName + '/versions/' + version;
-  if (opts.secret) {
-    var secretParamName = opts.secretParamName || 'secret';
-    path += '?' + secretParamName + '=' + opts.secret;
-  }
+  appendSecret(opts, path);
 
   var postBody = JSON.stringify({
     contents: contents
@@ -76,7 +82,7 @@ function createVersion(contents, opts, done) {
 
       // Request succeeded. If `setLatest` isn't set, all done
       if (!opts.setLatest) {
-        done(error, resultObject);
+        done(null, resultObject);
         return;
       }
 
@@ -91,7 +97,49 @@ function createVersion(contents, opts, done) {
 
 // Promotes the deployed version to the `latest`
 function setLatest(version, opts, done) {
+  "use strict";
 
+  var path = '/deploy/' + opts.applicationName + '/' + version;
+  appendSecret(opts, path);
+
+  var httpOptions = getHTTPOptions('', opts);
+  httpOptions.path = path;
+
+  var req = http.request(httpOptions, function(res) {
+    var responseString = '';
+
+    res.setEncoding('utf-8');
+    res.on('data', function(data) {
+      responseString += data;
+    });
+    res.on('end', function() {
+      var resultObject;
+      var error;
+      try {
+        resultObject = JSON.parse(responseString);
+      } catch(e) {
+        error = e;
+      }
+
+      if (!error && req.statusCode >= 300) {
+        error = {
+          error: resultObject,
+          message: 'failed to deploy version',
+          statusCode: req.statusCode
+        };
+      }
+
+      if (error) {
+        done(error, null);
+        return;
+      } else {
+        done(null, resultObject);
+        return;
+      }
+    });
+  });
+
+  req.end();
 }
 
 module.exports = function(opts) {
