@@ -15,6 +15,18 @@ function createVersionNumber() {
   return new Date().toJSON().slice(0, 10) + '--' + uniqueId();
 }
 
+function getHTTPOptions(body, opts) {
+  return {
+    host: opts.address,
+    method: 'POST',
+    port: opts.port || 80,
+    headers: {
+      'Content-Type': 'application/json',
+      'Content-Length': body.length
+    }
+  }
+}
+
 // Creates an application version in depot with the file contents
 function createVersion(contents, opts, done) {
   "use strict";
@@ -30,37 +42,56 @@ function createVersion(contents, opts, done) {
     contents: contents
   });
 
-  var headers = {
-    'Content-Type': 'application/json',
-    'Content-Length': postBody.length
-  };
-
-  var httpOptions = {
-    host: opts.address,
-    // /apps/:appId/versions/:versionId
-    path: path,
-    method: 'POST',
-    port: opts.port || 80,
-    headers: headers
-  };
+  var httpOptions = getHTTPOptions(postBody, opts);
+  httpOptions.path = path;
 
   var req = http.request(httpOptions, function(res) {
-    res.setEncoding('utf-8');
-
     var responseString = '';
 
+    res.setEncoding('utf-8');
     res.on('data', function(data) {
       responseString += data;
     });
-
     res.on('end', function() {
-      var resultObject = JSON.parse(responseString);
-      done();
+      var resultObject;
+      var error;
+      try {
+        resultObject = JSON.parse(responseString);
+      } catch(e) {
+        error = e;
+      }
+
+      if (!error && req.statusCode >= 300) {
+        error = {
+          error: resultObject,
+          message: 'failed to create new version',
+          statusCode: req.statusCode
+        };
+      }
+
+      if (error) {
+        done(error, null);
+        return;
+      }
+
+      // Request succeeded. If `setLatest` isn't set, all done
+      if (!opts.setLatest) {
+        done(error, resultObject);
+        return;
+      }
+
+      // Otherwise promote the version as latest
+      setLatest(version, opts, done);
     });
   });
 
   req.write(postBody);
   req.end();
+}
+
+// Promotes the deployed version to the `latest`
+function setLatest(version, opts, done) {
+
 }
 
 module.exports = function(opts) {
@@ -101,9 +132,21 @@ module.exports = function(opts) {
     if (file.isBuffer()) {
       // http://nodejs.org/api/buffer.html
       createVersion(file.contents.toString(), opts, function(err, data) {
-        _this.emit('data', data);
+        if (err) {
+          _this.emit(
+            'error',
+            new gutil.PluginError('gulp-depot', err)
+          )
+          callback();
+          return;
+        }
+
+        if (data) {
+          _this.emit('data', data);
+        }
         callback();
       });
+
       this.push(file);
     }
   }
