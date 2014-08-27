@@ -1,0 +1,6 @@
+{
+  "secret": "blah",
+  "address": "depot.dev",
+  "applicationName": "test",
+  "setLatest": true
+}
