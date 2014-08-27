@@ -14,20 +14,24 @@ npm install --save-dev gulp-depot
 Then, add it to your `gulpfile.js`:
 
 ```javascript
+var gulp  = require('gulp');
 var depot = require('gulp-depot');
 
+var opts = {
+  applicationName: 'your-app-name',
+  secret: 'PaSsW0rD',
+  address: '127.0.0.1',
+  setLatest: true
+};
+
 gulp.src('index.html')
-	.pipe(depot({
-		applicationName: 'my-app',
-		setLatest: true,
-		secret: 'PaSsW0rD'
-	}))
-	.on('error', function(err) {
-		...
-	})
-	.on('success', function() {
-		...
-	});
+  .pipe(depot(opts))
+  .on('error', function(err) {
+    console.error('error', err);
+  })
+  .on('data', function(data) {
+    console.log('data', data);
+  });
 ```
 
 ## API
