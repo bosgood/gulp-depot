@@ -2,5 +2,6 @@
   "secret": "blah",
   "address": "depot.dev",
   "applicationName": "test",
+  "path": null,
   "setLatest": true
 }

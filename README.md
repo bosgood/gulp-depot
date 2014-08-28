@@ -81,6 +81,12 @@ Default: 80
 
 *(optional)* Specify the server port.
 
+#### options.path
+Type: `String`
+Default: null
+
+*(optional)* Specify an additional path at which the server responds, e.g., `/depot` for `http://example.com/depot`.
+
 ## License
 
 [MIT License](http://en.wikipedia.org/wiki/MIT_License)

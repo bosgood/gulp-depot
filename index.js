@@ -1,6 +1,7 @@
 var through = require('through2');
 var http    = require('http');
 var gutil   = require('gulp-util');
+var path    = require('path');
 
 function uniqueId() {
   return 'xxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -29,11 +30,12 @@ function getHTTPOptions(body, opts) {
 }
 
 // Adds the shared secret parameter to the request URL if necessary
-function appendSecret(opts, path) {
+function appendSecret(opts, urlPath) {
   if (opts.secret) {
     var secretParamName = opts.secretParamName || 'secret';
-    path += '?' + secretParamName + '=' + opts.secret;
+    urlPath += '?' + secretParamName + '=' + opts.secret;
   }
+  return urlPath;
 }
 
 // Creates an application version in depot with the file contents
@@ -41,15 +43,16 @@ function createVersion(contents, opts, done) {
   "use strict";
 
   var version = opts.version || createVersionNumber();
-  var path = '/apps/' + opts.applicationName + '/versions/' + version;
-  appendSecret(opts, path);
+  var basePath = opts.path || '/';
+  var urlPath = path.join(basePath, 'apps', opts.applicationName, 'versions', version);
+  urlPath = appendSecret(opts, urlPath);
 
   var postBody = JSON.stringify({
     contents: contents
   });
 
   var httpOptions = getHTTPOptions(postBody, opts);
-  httpOptions.path = path;
+  httpOptions.path = urlPath;
 
   var req = http.request(httpOptions, function(res) {
     var responseString = '';
@@ -99,11 +102,12 @@ function createVersion(contents, opts, done) {
 function setLatest(version, opts, done) {
   "use strict";
 
-  var path = '/deploy/' + opts.applicationName + '/' + version;
-  appendSecret(opts, path);
+  var basePath = opts.path || '/';
+  var urlPath = path.join(basePath, 'deploy', opts.applicationName, version);
+  urlPath = appendSecret(opts, urlPath);
 
   var httpOptions = getHTTPOptions('', opts);
-  httpOptions.path = path;
+  httpOptions.path = urlPath;
 
   var req = http.request(httpOptions, function(res) {
     var responseString = '';
